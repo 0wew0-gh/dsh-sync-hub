@@ -93,7 +93,7 @@ test('host registers routes and answers loopback JSON envelopes', async (t) => {
   }
 
   const status = await call('status', {})
-  assert.equal(status.version, '0.1.0-dev.0')
+  assert.equal(status.version, '0.2.0')
 
   const listing = await call('fs.listDirs', { path: root })
   assert.equal(listing.path, root)
@@ -120,7 +120,24 @@ test('host registers routes and answers loopback JSON envelopes', async (t) => {
   // Status carries the live-run slot and auto-sync status for the sidebar/UI.
   const statusBefore = await call('status', {})
   assert.equal(statusBefore.activeRun, null)
+  assert.equal(statusBefore.pendingDecision, null)
   assert.equal(statusBefore.autoSync.enabled, false)
+
+  const decision = await call('decision.set', {
+    targetId,
+    scopeIds: ['agents-md'],
+    direction: 'both',
+    total: 3,
+    localMissing: 2,
+    remoteMissing: 1,
+  })
+  assert.equal(decision.total, 3)
+  const statusPending = await call('status', {})
+  assert.equal(statusPending.pendingDecision.total, 3)
+  assert.equal(statusPending.pendingDecision.localMissing, 2)
+  await call('decision.clear', {})
+  const statusCleared = await call('status', {})
+  assert.equal(statusCleared.pendingDecision, null)
 
   const saved = await call('settings.save', {
     patch: { autoSync: { enabled: true, intervalMinutes: 30 } },

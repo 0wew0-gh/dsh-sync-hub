@@ -20,6 +20,8 @@ test('client bundle follows the DSH module-loader contract', async () => {
   assert.match(source, /settings\.plugins\.tab/)
   assert.match(source, /settings\.section/)
   assert.match(source, /sidebar\.footer\.action/)
+  assert.match(source, /sidebar\.right\.pane\.tab/)
+  assert.match(source, /sidebarRightTabs/)
   assert.match(source, /speedBytesPerSec/)
   assert.match(source, /autoSync/)
   assert.match(source, /sidebar\.inject|sidebar\.register|sidebar\.footer\.action/)

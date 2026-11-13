@@ -1,6 +1,6 @@
 {
   "name": "dsh-sync-hub",
-  "version": "0.1.0-dev.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Sync DSH skills, plugin settings, plugin files, sessions and global AGENTS.md to local folders, WebDAV or S3-compatible storage.",
   "icon": "./assets/icon.svg",
