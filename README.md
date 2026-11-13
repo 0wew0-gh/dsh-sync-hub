@@ -22,7 +22,8 @@ node scripts/real-backup-test.mjs
 
 ### 已实现
 
-- 同步项：`agents-md`、`plugin-settings`、`plugin-files`、`skills`、`sessions`（附件/统计默认关闭）。
+- 同步项：`agents-md`、`plugin-settings`、`plugin-files`、`skills`、`memes`、`skins`、`pets`、`sessions`（附件/统计默认关闭）。
+- 个性化资源：`memes`（`meme-packs` + `dsh-expression.json`）、`skins`（`skins`、`skin-center` + `skin-center-active.json`）、`pets`（`pets` + `pet.json`）默认开启、冲突保留双方；宠物安装残留 `*.install-*` 与 `skin-center` 缓存不参与同步。
 - 本地目录目标（普通磁盘、UNC、映射盘、同步盘目录）。
 - 内容寻址 blob + manifest；同内容不覆盖、不改 mtime；单侧变更快进；双侧冲突按 scope 策略（会话/技能保留双方，AGENTS.md/配置取较新）。
 - 设置页：`settings.plugins.tab`（不可用时回退 `settings.section`），含同步项勾选、目标管理、预览、同步进度、快照列表。

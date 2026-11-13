@@ -153,6 +153,9 @@ DSH（DeepSeek Harness）把用户资产分散在多个位置：
 | `plugin-settings` | 插件设置 | 各 profile 的 `package.json`、`cordis.patch.yml`、`pnpm-workspace.yaml`、`.npmrc`、`pnpm-lock.yaml`、`compatibility.json` | < 0.1 MB | 开 | 结构化合并（§5.6） |
 | `plugin-files` | 插件文件 | `$DSH_HOME/plugins/**`、`$DSH_HOME/.agent-presets/**` | 1.4 MB | 开 | 按文件 newer（可选 keep-both） |
 | `skills` | 全局 Skills | `~/.agents/skills/**`、`~/.agents/.skill-lock.json` | 25 MB | 开 | 按文件 newer；删除走 tombstone |
+| `memes` | 表情包 | `$DSH_HOME/meme-packs/**`、`$DSH_HOME/dsh-expression.json` | 7 MB | 开 | per-file keep-both |
+| `skins` | 外观皮肤 | `$DSH_HOME/skins/**`、`$DSH_HOME/skin-center/**`、`$DSH_HOME/skin-center-active.json` | 85 MB | 开 | per-file keep-both |
+| `pets` | 宠物外观 | `$DSH_HOME/pets/**`、`$DSH_HOME/pet.json` | 211 MB | 开 | per-file keep-both |
 | `sessions` | 会话数据 | `$DSH_HOME/sessions/**` | 313 MB | 开 | per-file keep-both（§5.4） |
 | `attachments` | 会话附件 | `$DSH_HOME/attachments/**` | 101 MB | 关（可选/懒同步） | 内容寻址、缺失即补 |
 | `agents-md` | 全局 AGENTS.md | `$DSH_HOME/AGENTS.md` | 12 KB | 开 | 文本 merge3 |
@@ -596,6 +599,7 @@ DSH 没有「注册设置页函数」，所有设置 UI 都是插槽贡献：
 **/temp/**
 **/cache/**
 **/skin-center/**/.cache/**
+**/*.install-*
 **/.plugin-manager/logs/**
 **/*.log
 **/*.tmp
