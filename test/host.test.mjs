@@ -123,7 +123,8 @@ test('host registers routes and answers loopback JSON envelopes', async (t) => {
   }
 
   const status = await call('status', {})
-  assert.equal(status.version, '0.2.1')
+  assert.equal(status.version, '0.2.2')
+  assert.equal(status.sidebarProgressMode, 'running')
 
   const listing = await call('fs.listDirs', { path: root })
   assert.equal(listing.path, root)
@@ -190,13 +191,18 @@ test('host registers routes and answers loopback JSON envelopes', async (t) => {
   assert.equal(statusCleared.pendingDecision, null)
 
   const saved = await call('settings.save', {
-    patch: { autoSync: { enabled: true, intervalMinutes: 30 } },
+    patch: { autoSync: { enabled: true, intervalMinutes: 30 }, sidebarProgressMode: 'always' },
   })
   assert.equal(saved.settings.autoSync.enabled, true)
   assert.equal(saved.settings.autoSync.intervalMinutes, 30)
+  assert.equal(saved.settings.sidebarProgressMode, 'always')
   const statusAfter = await call('status', {})
   assert.equal(statusAfter.autoSync.enabled, true)
   assert.equal(statusAfter.autoSync.intervalMinutes, 30)
+  assert.equal(statusAfter.sidebarProgressMode, 'always')
+
+  const invalidMode = await call('settings.save', { patch: { sidebarProgressMode: 'bogus' } })
+  assert.equal(invalidMode.settings.sidebarProgressMode, 'running')
 
   const { runId } = await call('sync', { targetId, scopeIds: ['agents-md'], direction: 'push' })
   let run
