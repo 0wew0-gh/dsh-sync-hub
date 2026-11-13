@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Data Sync">
+  <defs>
+    <linearGradient id="dshsync-bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4F8CFF"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#dshsync-bg)"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 28.5a15 15 0 0 1 25.2-8.7"/>
+    <path d="M43.5 14.5v7.2h-7.2"/>
+    <path d="M46 35.5a15 15 0 0 1-25.2 8.7"/>
+    <path d="M20.5 49.5v-7.2h7.2"/>
+  </g>
+  <circle cx="32" cy="32" r="3.2" fill="#FFFFFF"/>
+</svg>

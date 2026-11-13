@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "数据同步",
+    "description": "把 DSH 的 skills、插件设置、插件文件、会话数据与全局 AGENTS.md 同步到本地目录、WebDAV 或 S3 兼容存储。"
+  }
+}

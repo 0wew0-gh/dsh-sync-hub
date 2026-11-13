@@ -1,0 +1,4 @@
+# Adds the host API and the "data sync" settings tab to the DSH web profile.
+- insert:
+    - id: dsh-sync-hub
+      name: dsh-sync-hub

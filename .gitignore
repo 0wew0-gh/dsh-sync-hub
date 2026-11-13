@@ -1,0 +1,30 @@
+# dsh-sync-hub 本地开发忽略项
+# 说明：本仓库当前处于设计阶段；以下为计划中的忽略规则，代码落地后启用。
+
+# 依赖与构建产物
+node_modules/
+dist/
+coverage/
+
+# AI 会话与项目记忆（按用户全局规则，不提交）
+AGENTS.md
+MEMORY.md
+
+# 本地调研/临时产物
+.recon/
+.tmp/
+*.log
+*.tmp
+*.bak
+*.bak-*
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 测试夹具中的临时目录与备份产物
+test/.tmp/
+test-backups/
+*.tgz

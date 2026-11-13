@@ -1,0 +1,18 @@
+# dsh-sync-hub 用户排除规则示例
+# 放置位置：$DSH_HOME/dsh-sync-hub/.dshsyncignore
+# 语法：每行一个 glob（支持 *、**、?），# 开头为注释，空行忽略。
+# 这些规则叠加在内置硬排除（凭据、node_modules、缓存、日志）之上，不能取消硬排除。
+
+# 示例：不同步某个插件的历史文件
+@wingsky-1/dsh-notifier/history.jsonl
+
+# 示例：不同步统计类插件的数据
+cost-meter/**
+usage-meter/**
+dsh-get-balance-series-store.json
+
+# 示例：不同步某个工作区的会话（按目录名匹配）
+sessions/--D-work-temp--/**
+
+# 示例：不同步大体积附件目录（附件 scope 默认已是关闭状态）
+attachments/objects/**
