@@ -201,6 +201,28 @@ test('a deleted local file is asked about, then restored or skipped by choice', 
   assert.deepEqual(await fsp.readFile(join(a.home, 'AGENTS.md')), original)
 })
 
+test('pendingCounts reports pending uploads without writing', async (t) => {
+  const root = await fsp.mkdtemp(join(tmpdir(), 'dsh-sync-pending-'))
+  t.after(() => fsp.rm(root, { recursive: true, force: true }))
+
+  const a = await newEngine(join(root, 'a'))
+  await makeHome(a.home, a.agentsHome)
+  const [target] = await a.engine.upsertTarget({ name: 'pending', path: a.backup })
+  await a.engine.sync({ targetId: target.id, direction: 'push' })
+
+  const clean = await a.engine.pendingCounts({ targetId: target.id })
+  assert.equal(clean.upload, 0)
+  assert.equal(clean.download, 0)
+  assert.equal(clean.total, 0)
+
+  await fsp.writeFile(join(a.home, 'AGENTS.md'), '# changed rules\n')
+  const pending = await a.engine.pendingCounts({ targetId: target.id })
+  assert.equal(pending.upload, 1)
+  assert.ok(pending.total >= 1)
+  // Read-only: the changed file is still local only and nothing was written.
+  assert.equal(await fsp.readFile(join(a.home, 'AGENTS.md'), 'utf8'), '# changed rules\n')
+})
+
 test('paths from a manifest cannot escape their root', () => {
   for (const bad of ['../x', 'a/../../b', '/etc/passwd', 'C:\\x', 'a\\b', 'a//b', './x']) {
     assert.throws(() => assertSafeRel(bad), undefined, `should reject ${bad}`)
