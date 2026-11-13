@@ -51,6 +51,7 @@ test('host registers routes and answers loopback JSON envelopes', async (t) => {
 
   const routes = []
   const disposers = []
+  const agentTools = []
   const ctx = {
     effect(fn) {
       const disposer = fn()
@@ -59,6 +60,26 @@ test('host registers routes and answers loopback JSON envelopes', async (t) => {
     },
     get() {
       return undefined
+    },
+    inject(_deps, callback) {
+      const scope = {
+        tools: {
+          register(definition) {
+            agentTools.push(definition)
+            return () => {}
+          },
+        },
+        effect(fn) {
+          const disposer = fn()
+          if (typeof disposer === 'function') disposers.push(disposer)
+          return () => {}
+        },
+        get() {
+          return undefined
+        },
+      }
+      callback(scope)
+      return () => {}
     },
     webServer: {
       register(route) {
@@ -82,6 +103,15 @@ test('host registers routes and answers loopback JSON envelopes', async (t) => {
   })
   assert.equal(routes.length, 1)
   assert.equal(routes[0].path, '/dsh-sync')
+  assert.deepEqual(
+    agentTools.map((tool) => tool.name).sort(),
+    [
+      'dsh_sync_custom_item_add',
+      'dsh_sync_custom_item_list',
+      'dsh_sync_custom_item_remove',
+      'dsh_sync_custom_item_update',
+    ]
+  )
 
   const call = async (endpoint, payload) => {
     const response = mockResponse()
@@ -93,7 +123,7 @@ test('host registers routes and answers loopback JSON envelopes', async (t) => {
   }
 
   const status = await call('status', {})
-  assert.equal(status.version, '0.2.0')
+  assert.equal(status.version, '0.2.1')
 
   const listing = await call('fs.listDirs', { path: root })
   assert.equal(listing.path, root)
@@ -101,6 +131,26 @@ test('host registers routes and answers loopback JSON envelopes', async (t) => {
   const inspected = await call('fs.statPath', { path: join(root, 'home') })
   assert.equal(inspected.exists, true)
   assert.equal(inspected.type, 'dir')
+
+  // Agent tools manage custom dir/file items through the same engine settings.
+  const customDir = join(root, 'custom-dir')
+  await fsp.mkdir(customDir, { recursive: true })
+  const addTool = agentTools.find((tool) => tool.name === 'dsh_sync_custom_item_add')
+  const listTool = agentTools.find((tool) => tool.name === 'dsh_sync_custom_item_list')
+  const updateTool = agentTools.find((tool) => tool.name === 'dsh_sync_custom_item_update')
+  const removeTool = agentTools.find((tool) => tool.name === 'dsh_sync_custom_item_remove')
+
+  const added = await addTool.execute({ name: 'agent-dir', type: 'dir', path: customDir }, {})
+  assert.equal(added.item.name, 'agent-dir')
+  assert.equal(added.item.type, 'dir')
+  const listed = await listTool.execute({}, {})
+  assert.equal(listed.count, 1)
+  const updated = await updateTool.execute({ idOrName: 'agent-dir', name: 'agent-dir-2' }, {})
+  assert.equal(updated.item.name, 'agent-dir-2')
+  const removed = await removeTool.execute({ idOrName: 'agent-dir-2' }, {})
+  assert.equal(removed.removed.name, 'agent-dir-2')
+  const afterRemove = await listTool.execute({}, {})
+  assert.equal(afterRemove.count, 0)
 
   const backupPath = join(root, 'backup')
   const upserted = await call('targets.upsert', { target: { name: 'backup', path: backupPath } })

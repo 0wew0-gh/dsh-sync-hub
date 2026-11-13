@@ -102,3 +102,42 @@ test('a target resolves its directory per device', async (t) => {
   assert.equal(await fsp.readFile(join(engineB.dshHome, 'AGENTS.md'), 'utf8'), '# rules\n')
   assert.equal((await engineB.listTargets())[0].effectivePath, backupB)
 })
+
+test('custom item CRUD validates paths, types and duplicate names', async (t) => {
+  const root = await fsp.mkdtemp(join(tmpdir(), 'dsh-sync-custom-crud-'))
+  t.after(() => fsp.rm(root, { recursive: true, force: true }))
+
+  const engine = await makeEngine(root, 'a')
+  const dirA = join(root, 'dir-a')
+  const dirB = join(root, 'dir-b')
+  await fsp.mkdir(dirA, { recursive: true })
+  await fsp.mkdir(dirB, { recursive: true })
+
+  const added = await engine.upsertCustomItem({ name: '源码', type: 'dir', path: dirA })
+  assert.equal(added.name, '源码')
+  assert.equal(added.path, dirA)
+  assert.ok(added.id)
+
+  const updated = await engine.upsertCustomItem({ id: added.id, name: '源码2', enabled: false })
+  assert.equal(updated.name, '源码2')
+  assert.equal(updated.enabled, false)
+  assert.equal(updated.path, dirA)
+
+  await assert.rejects(
+    engine.upsertCustomItem({ create: true, name: '源码2', type: 'dir', path: dirB }),
+    /同名/
+  )
+  await assert.rejects(
+    engine.upsertCustomItem({ name: '不存在', type: 'dir', path: join(root, 'missing') }),
+    /不存在/
+  )
+  await assert.rejects(
+    engine.upsertCustomItem({ name: '类型不符', type: 'file', path: dirB }),
+    /不是文件/
+  )
+
+  const removed = await engine.removeCustomItem('源码2')
+  assert.equal(removed.id, added.id)
+  assert.equal((await engine.listCustomItems()).length, 0)
+  await assert.rejects(engine.removeCustomItem('源码2'), /找不到/)
+})

@@ -96,6 +96,56 @@ node scripts/install-plugin.mjs --profile web --uninstall
 - 桌面版：已在此机器安装并验证设置页、同步、侧栏进度与定时同步。
 - web 版：已安装到 `web` profile，并通过 `dsh --profile web --dump-config`（组合出插件行）与模块导入（导出 `apply`、注册 `/dsh-sync` 路由）验证；浏览器端使用与桌面版相同的前端插槽，首次在浏览器中打开时建议确认「数据同步」tab 与侧栏进度。
 
+## 智能体接口（Agent tools）
+
+让智能体自己管理「自定义同步项」（任意目录或单个文件），不需要手工改 `settings.json`，也不用打开设置页逐项填表。工具随宿主插件注册：只要当前 DSH（web 或桌面版）会给智能体会话暴露 `tools` 服务，智能体就能看到并调用这四个工具；注册失败时不影响插件其它功能。
+
+| 工具 | 作用 | 关键参数 |
+| --- | --- | --- |
+| `dsh_sync_custom_item_list` | 列出自定义同步项 | — |
+| `dsh_sync_custom_item_add` | 新增目录/文件同步项 | `name`、`type`: `dir`/`file`、`path`（当前电脑绝对路径，必须存在）、`enabled?`、`devicePaths?` |
+| `dsh_sync_custom_item_update` | 改名/改类型/改路径/启停 | `idOrName`，其余字段可选 |
+| `dsh_sync_custom_item_remove` | 删除自定义项（只删配置） | `idOrName` |
+
+### 一次完整的使用流程
+
+1. 在会话里直接对智能体说需求，例如：「把 `D:\projects\demo` 加入同步，名字叫项目源码」。
+2. 智能体调用 `dsh_sync_custom_item_add`，工具校验路径后写入 `settings.customItems`，并返回新的自定义项列表。
+3. 打开 **设置 → 插件 → 数据同步 → 自定义**（或右栏「数据同步」页）即可看到这一项，可继续在 UI 里调整路径、启停或删除。
+4. 到「同步」页点「预览变更 → 开始同步」才会真正传输；工具只改同步配置，**不会自动启动同步**。
+
+### 参数与校验规则
+
+- `path` 必须是当前电脑上的绝对路径（支持 UNC，如 `\\nas\share\x`），且必须已存在；目录/文件类型要与 `type` 一致。不存在或类型不符会被拒绝，避免写入无效配置。
+- 其它电脑的路径用 `devicePaths: [{ device: "PC-B", path: "E:\\backup" }]` 传入，按「设备名 → 目录」映射；当前电脑仍使用主 `path`。设备名就是设置页里显示的电脑名。
+- `name` 不区分大小写且在同一插件内唯一；新增重名会报错（改名字用 update）。
+- `enabled: false` 可先建但停用；后续可在 UI 或 update 里启用。
+- 删除只移除同步配置，**不会删除本地文件或已经备份的数据**；建议在调用前向用户确认。
+
+### 工具会做的事 / 不会做的事
+
+- 会：新增、列出、修改、删除自定义目录/文件同步项；变更立即写入设置，UI 同步可见。
+- 不会：不会触发一次同步、不会修改内置同步项（skills/会话等）、不会删除本地或备份文件、不会修改其它电脑上的实际路径（只记录映射）。
+
+### 常见报错
+
+| 报错 | 含义 | 处理 |
+| --- | --- | --- |
+| `路径不存在: …` | `path` 在本机不存在 | 确认路径拼写，或先用 `fs.statPath` 类工具/资源管理器确认 |
+| `不是目录/不是文件` | `type` 与实际类型不符 | `dir` 用于文件夹，`file` 用于单个文件 |
+| `已存在同名自定义同步项` | 新增时名称重复 | 换名字，或用 update 修改已有项 |
+| `找不到自定义同步项` | update/remove 的 `idOrName` 不匹配 | 先用 list 查看准确的 id 与名字 |
+
+### 自然语言示例
+
+- 「把 `D:\projects\demo` 加入同步，名字叫项目源码」→ `dsh_sync_custom_item_add`
+- 「列出当前自定义同步项」→ `dsh_sync_custom_item_list`
+- 「把项目源码改名为 demo，并停用」→ `dsh_sync_custom_item_update`
+- 「为项目源码在 PC-B 上使用 `E:\backup\demo`」→ `dsh_sync_custom_item_update`（`devicePaths`）
+- 「移除备注文件这个同步项」→ `dsh_sync_custom_item_remove`
+
+> 提示：如果智能体表示找不到这些工具，确认插件已安装、DSH 已完全重启，且当前版本 ≥ 0.2.1；也可以用「自定义」页手工完成同样操作。
+
 ## 技术要点
 
 - 零运行时依赖，纯 ESM，无构建步骤（与同类插件一致的取舍）。
