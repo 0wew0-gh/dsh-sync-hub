@@ -123,7 +123,7 @@ test('host registers routes and answers loopback JSON envelopes', async (t) => {
   }
 
   const status = await call('status', {})
-  assert.equal(status.version, '0.2.3')
+  assert.equal(status.version, '0.2.4')
   assert.equal(status.sidebarProgressMode, 'running')
   assert.equal(status.pendingRefreshSeconds, 600)
 
@@ -192,12 +192,18 @@ test('host registers routes and answers loopback JSON envelopes', async (t) => {
   assert.equal(statusCleared.pendingDecision, null)
 
   const saved = await call('settings.save', {
-    patch: { autoSync: { enabled: true, intervalMinutes: 30 }, sidebarProgressMode: 'always', pendingRefreshSeconds: 300 },
+    patch: {
+      autoSync: { enabled: true, intervalMinutes: 30 },
+      sidebarProgressMode: 'always',
+      pendingRefreshSeconds: 300,
+      sessionPathMappings: { 'C:\\Users\\old\\': 'C:\\Users\\new\\', '': 'C:\\Users\\ignored' },
+    },
   })
   assert.equal(saved.settings.autoSync.enabled, true)
   assert.equal(saved.settings.autoSync.intervalMinutes, 30)
   assert.equal(saved.settings.sidebarProgressMode, 'always')
   assert.equal(saved.settings.pendingRefreshSeconds, 300)
+  assert.deepEqual(saved.settings.sessionPathMappings, { 'C:\\Users\\old': 'C:\\Users\\new' })
   const statusAfter = await call('status', {})
   assert.equal(statusAfter.autoSync.enabled, true)
   assert.equal(statusAfter.autoSync.intervalMinutes, 30)
