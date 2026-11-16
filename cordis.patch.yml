@@ -2,3 +2,6 @@
 - insert:
     - id: dsh-sync-hub
       name: dsh-sync-hub
+      # The loader injects services declared on the patch row; a module-level
+      # `export const inject` is not consulted by newer dsh loaders.
+      inject: [webServer]

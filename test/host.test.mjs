@@ -58,8 +58,8 @@ test('host registers routes and answers loopback JSON envelopes', async (t) => {
       if (typeof disposer === 'function') disposers.push(disposer)
       return () => {}
     },
-    get() {
-      return undefined
+    get(name) {
+      return name === 'webServer' ? ctx.webServer : undefined
     },
     inject(_deps, callback) {
       const scope = {
@@ -76,6 +76,12 @@ test('host registers routes and answers loopback JSON envelopes', async (t) => {
         },
         get() {
           return undefined
+        },
+        webServer: {
+          register(route) {
+            routes.push(route)
+            return () => {}
+          },
         },
       }
       callback(scope)
@@ -123,7 +129,7 @@ test('host registers routes and answers loopback JSON envelopes', async (t) => {
   }
 
   const status = await call('status', {})
-  assert.equal(status.version, '0.2.4')
+  assert.equal(status.version, '0.3.0')
   assert.equal(status.sidebarProgressMode, 'running')
   assert.equal(status.pendingRefreshSeconds, 600)
 

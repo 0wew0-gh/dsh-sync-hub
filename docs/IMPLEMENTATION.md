@@ -196,6 +196,14 @@ D:\object\agents\sync\
 5. 恢复：原子写、逐文件哈希校验；提供「清理投影缓存」端点（只删 `storages/session_projcache`）。
 6. 测试：用 `zlib.zstdCompressSync` 生成多帧样本；12 MB 合成文件；并发修改模拟；字节级往返断言；**同内容不重写断言（目标文件 SHA-256 相同则写入次数为 0、mtime 不变）**；真实数据（用户同意后）只读扫描计数，不复制内容进仓库。
 
+2026-11-16 增量（用户确认，已实现）：
+
+- 会话选择 `scopes.sessions.mode = 'all' | 'selected'` + `selectedSessionIds`（新会话不自动加入）。
+- 按电脑 + 用户嵌套的 `sessionPaths`（`<deviceName>|<osUserName>` → `<sessionId>` → 绝对路径）；迁移/恢复优先解析，回退旧 `sessionPathMappings` 与旧用户目录换算。旧版 session-first 结构会在归一化时转换；「会话」页不再单独编辑路径映射，改为恢复时弹出目录选择框并写入该结构。
+- 同一 sessionId 视为一个会话：普通同步折叠重复副本，追加日志可快进；会话页按 id 对比 size/mtime/sha256/append 并提供「同步 / 覆盖（先备份）」。
+- 从最新 manifest 恢复（不读历史快照）：先备份并移走本机同名副本，原子写、改写 cwd，`autoReplaceUserFolder` 控制自动替换旧用户目录。
+- 测试：`test/session-transfer.test.mjs`、`test/host-sessions.test.mjs`。详见 README「已实现」与 MEMORY。
+
 验收：
 
 - 样本往返 SHA-256 一致；冲突产生两份且均可在 UI 看到；路径映射用例正确。

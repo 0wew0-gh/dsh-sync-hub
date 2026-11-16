@@ -367,6 +367,12 @@ remoteChanged = R[p] != B[p]
   1. `as-is`（默认）：原样恢复，DSH 会把它当成一个「陌生路径」的工作区；
   2. `map`：按用户配置的映射表（`D:\object\agents` → `/home/me/object/agents`）重写目录名；
   3. `skip`：跳过其他设备的会话目录。
+- **会话选择**：`scopes.sessions.mode = 'all' | 'selected'` + `selectedSessionIds`。`all` 保持全量行为（含以后新建的会话）；`selected` 只同步勾选的 session 目录，新会话默认不自动加入。扫描在遍历后按 session id 过滤，manifest 仍保留 `sessions/<projectDir>/<sessionId>/...` 的项目目录结构。
+- **按 sessionId 归一**：一个 sessionId 就是一个会话。普通同步计划在比较前把本地/远端/base 中同一 id 的多份副本折叠到同一 canonical 项目目录（优先本地副本），因此不会因为重复目录重复上传；`.dedupe-backup-*` 隔离目录不参与同步。
+- **追加快进**：sessions 的 keep-both 冲突先做字节前缀判断——本地含备份全部字节（或反之）时改为快进上传/下载；分叉才保留双方副本。
+- **按电脑 + 用户保存路径**：`sessionPaths: { '<deviceName>|<osUserName>': { '<sessionId>': '<绝对路径>' } }`。迁移/恢复按 current device|user → sessionId 优先解析；找不到再回退旧 `sessionPathMappings`，最后才做「旧用户目录 → 当前用户目录」换算。旧版 session-first 结构在 `normalizeSettings` 中自动转换。迁移成功或恢复后自动写入；设置页可编辑/删除。
+- **同一会话对比与覆盖**：会话页对比本地与最新备份 manifest 的 size / mtime / sha256 / 是否 append-only，提供「同步到备份」「从备份同步」「覆盖本机」「覆盖备份」。覆盖必须显式确认，且先备份被覆盖侧；分叉时由用户选择方向，不做帧级合并。
+- **从备份恢复（最新 manifest）**：默认读取目标端最新 manifest，不读取历史快照。恢复前把本机同名 sessionId 的所有副本移动到本机备份目录（`state/backups/<ts>/sessions/`），再原子写文件、改写会话头 cwd；单会话时目标路径即会话路径，多会话时作为基础目录保留相对结构。`autoReplaceUserFolder`（默认 false）控制是否自动替换旧用户目录。
 - **恢复后**：会话列表由 `storages/workspace.json` 与 `storages/session_projcache/` 支撑，恢复后提示「重启 DSH 或清理投影缓存」，插件提供「清理投影缓存」按钮（只删 `session_projcache`，可再生成）。
 
 ### 5.8 增量与断点
@@ -557,6 +563,13 @@ DSH 没有「注册设置页函数」，所有设置 UI 都是插槽贡献：
 | `snapshots.list` | 历史快照列表 | `{ targetId }` |
 | `snapshots.preview` | 快照影响面 | `{ targetId, key }` |
 | `restore` | 恢复（整快照/scope） | `{ targetId, key, scopes, pathMapping }` |
+| `sessions.list` | 会话概览 + 选择状态 + 当前 device\|user 的映射/建议路径 | — |
+| `sessions.compare` | 本机与最新备份按 sessionId 对比（size/mtime/sha256/append） | `{ targetId, sessionIds? }` |
+| `sessions.backup.list` | 最新备份 manifest 中的会话列表 | `{ targetId }` |
+| `sessions.sync` | 把选中会话写入备份 | `{ targetId, sessionIds, confirm }` |
+| `sessions.restore` | 从最新备份恢复会话（先备份本机、原子写、改写 cwd） | `{ targetId, sessionIds, targetPath?, autoReplaceUserFolder?, confirm }` |
+| `sessions.overwrite` | 用备份覆盖本机，或用本机覆盖备份 | `{ targetId, sessionIds, side: 'local'\|'backup', confirm }` |
+| `sessions.relocate` / `sessions.relocateUser` / `sessions.dedupe` | 会话目录迁移与重复副本清理 | `{ dirName, newCwd, confirm }` 等 |
 | `cache.clearProjections` | 清理 `session_projcache` | — |
 | `security.unlock` | 输入加密口令（如启用） | `{ passphrase }` |
 | `diagnostics.export` | 导出诊断日志（脱敏） | — |
@@ -664,12 +677,17 @@ DSH 没有「注册设置页函数」，所有设置 UI 都是插槽贡献：
     "plugin-settings": { "enabled": true, "profiles": ["web"] },
     "plugin-files": { "enabled": true },
     "skills": { "enabled": true },
-    "sessions": { "enabled": true, "includeAttachments": false,
-                  "pathMapping": "as-is", "map": [] },
+    "sessions": { "enabled": true, "mode": "selected",
+                  "selectedSessionIds": ["session-3bf39cd1-..."] },
     "attachments": { "enabled": false },
     "agents-md": { "enabled": true },
     "storages": { "enabled": false }
   },
+  "sessionPaths": {
+    "DESKTOP-01|alice": { "session-3bf39cd1-...": "C:\\Users\\alice\\Documents\\demo" }
+  },
+  "autoReplaceUserFolder": false,
+  "sessionPathMappings": {},
   "strategy": "smart",
   "direction": "both",
   "autoSync": { "enabled": false, "intervalMinutes": 60, "onStartup": false },
@@ -687,7 +705,8 @@ DSH 没有「注册设置页函数」，所有设置 UI 都是插槽贡献：
 | 场景 | 处理 |
 | --- | --- |
 | 同名用户目录（`C:\Users\wangyi` ↔ `C:\Users\other`） | 所有本机路径都相对 `$DSH_HOME`/`$HOME` 表达，不写绝对路径 |
-| 会话工作区路径不同 | `sessions.pathMapping: as-is / map / skip`（§5.7） |
+| 会话工作区路径不同 | 优先 `sessionPaths['device\|user'][sessionId]`；回退旧 `sessionPathMappings`；最后按「旧用户目录 → 当前用户目录」换算（§5.7） |
+| 同一会话在多台电脑/多个目录出现 | 按 sessionId 归一为一个会话；恢复/迁移前先清理或备份重复副本（§5.7） |
 | 换盘符/UNC | `plugin-files` 中的 `file:` 依赖在恢复后提示重装；不自动改写插件源码 |
 | 时间不同步 | 以 SHA-256 为最终依据，mtime 只做快速判定，时钟漂移不会导致误判为相同 |
 | 不同 DSH 版本 | 清单带 `schema`；不兼容时拒绝写入并提示升级插件 |
