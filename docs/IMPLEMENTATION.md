@@ -216,7 +216,7 @@ D:\object\agents\sync\
 
 1. `plugin-files`：`$DSH_HOME/plugins/**`、`.agent-presets/**`；文件 newer 策略；删除 tombstone；同内容（SHA-256 相同）不重写、不改 mtime。
 2. `skills`：`~/.agents/skills/**` + `.skill-lock.json`；一层目录结构；可执行位（`mode`）随清单保存；删除 tombstone；同内容跳过写入。
-3. `plugin-settings`：
+3. `plugin-settings`（当前临时策略：冲突时本机优先并上传本机版本；以下结构化合并仍待实现）：
    - `cordis.patch.yml`：解析 → 按 id 索引 → **语义等价判定（相同则整文件 noop）** → 三方合并（只一侧变取变化侧；双变冲突）→ 可移植化清洗 → 序列化；写前备份；合并后校验键集。
    - `package.json`：dependencies 并集、bundles 保序并集、孤儿过滤、`allowBuilds` 不继承；内容语义等价时 noop。
    - `pnpm-lock.yaml`：冲突取远端；`pnpm-workspace.yaml`、`.npmrc`、`compatibility.json` 按 newer。

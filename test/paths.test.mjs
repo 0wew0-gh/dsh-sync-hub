@@ -1,0 +1,12 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { join, sep } from 'node:path'
+import { resolveInside } from '../lib/core/paths.js'
+
+test('resolveInside allows a filesystem root as the target directory', () => {
+  const root = process.platform === 'win32' ? 'C:\\' : '/'
+  const inside = resolveInside(root, 'dsh-sync-v0.3.0')
+  assert.equal(inside, join(root, 'dsh-sync-v0.3.0'))
+
+  assert.throws(() => resolveInside(join(root, 'backup'), '..' + sep + 'escape'))
+})

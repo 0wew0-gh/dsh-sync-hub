@@ -185,11 +185,11 @@ type Target =
 
 ### 4.3 远端仓库布局
 
-每个 target 下固定前缀（默认 `dsh-sync/v1/`，可配）：
+每个 target 下固定版本前缀（默认 `dsh-sync-v<插件版本>/`，可配；旧默认 `dsh-sync/v1/` 会自动迁移到新前缀）：
 
 ```text
-dsh-sync/v1/
-  meta.json                         # { schema, updatedAt, scopes, devices: {id: {name, lastSeenAt, version}} }
+dsh-sync-v0.3.0/
+  meta.json                         # { schema, dshVersion, updatedAt, scopes, devices: {id: {name, lastSeenAt, version}} }
   manifests/<deviceId>.json         # 每设备、每 scope 的清单（同一文件内按 scope 分组）
   blobs/<aa>/<bb>/<sha256>          # 原始字节，内容寻址（aa/bb 为 sha256 前两段，避免大目录）
   snapshots/index.json              # 历史索引 { schema, entries: [{key, createdAt, deviceId, scopes, totalBytes}] }
@@ -321,7 +321,7 @@ remoteChanged = R[p] != B[p]
 | `skills` | 文件树 | `newer` | `keep-both` | 以 mtime 较新者为准；同 mtime 时本地优先并记录 |
 | `plugin-files` | 文件树 | `newer` | `keep-both` | 同上 |
 | `agents-md` | 文本 | `merge3` | `newer` / `local` / `remote` | 行级三方合并；无法合并时阻止自动完成并展示 diff |
-| `plugin-settings` | YAML/JSON | 结构化（§5.6） | `local` / `remote` | 不整文件覆盖 |
+| `plugin-settings` | YAML/JSON | `local`（临时） | `local` / `remote` / 结构化合并（§5.6，待实现） | 冲突时保留本机，避免旧备份还原插件开关 |
 | `storages` | JSON | `newer`（默认关） | — | 含绝对路径，仅同构环境使用 |
 
 全局策略（设置页可选）：`smart`（默认，逐项按上表）、`local-first`、`remote-first`。`smart` 遇到无法自动裁决的项时返回 `needs-choice` + 冲突列表，由 UI 逐项勾选后二次提交，不做静默覆盖。
@@ -670,7 +670,7 @@ DSH 没有「注册设置页函数」，所有设置 UI 都是插槽贡献：
       "path": "\\\\nas\\share\\dsh-sync" },
     { "id": "t_oss", "name": "阿里云 OSS", "kind": "s3", "enabled": false,
       "endpoint": "https://oss-cn-hangzhou.aliyuncs.com", "region": "cn-hangzhou",
-      "bucket": "my-bucket", "prefix": "dsh-sync/v1", "accessKeyId": "<stored-locally>",
+      "bucket": "my-bucket", "prefix": "dsh-sync-v0.3.0", "accessKeyId": "<stored-locally>",
       "forcePathStyle": false, "providerHint": "oss" }
   ],
   "scopes": {

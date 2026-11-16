@@ -94,8 +94,17 @@ test('local backup, identical no-op and restore round trip', async (t) => {
   assert.ok(Number.isFinite(first.summary.avgBytesPerSec))
 
   // Repository layout exists and contains no excluded files.
-  const manifestPath = join(a.backup, 'dsh-sync', 'v1', 'manifests', `${(await a.engine.getSettings()).deviceId}.json`)
+  const targetPrefix = (await a.engine.getSettings()).targets[0].prefix
+  const manifestPath = join(a.backup, targetPrefix, 'manifests', `${(await a.engine.getSettings()).deviceId}.json`)
   const manifestText = await fsp.readFile(manifestPath, 'utf8')
+  const settingsAfterFirst = await a.engine.getSettings()
+  assert.match(settingsAfterFirst.targets[0].prefix, /^dsh-sync-v/)
+  const meta = JSON.parse(await fsp.readFile(join(a.backup, settingsAfterFirst.targets[0].prefix, 'meta.json'), 'utf8'))
+  assert.ok(typeof meta.dshVersion === 'string' && meta.dshVersion.length > 0)
+  const backupInfo = await a.engine.getBackupInfo(targets[0].id)
+  assert.equal(backupInfo.prefix, targets[0].prefix)
+  assert.equal(backupInfo.exists, true)
+  assert.ok(typeof backupInfo.dshVersion === 'string' && backupInfo.dshVersion.length > 0)
   assert.ok(!manifestText.includes('credentials'))
   assert.ok(!manifestText.includes('node_modules'))
   assert.ok(!manifestText.includes('.log'))

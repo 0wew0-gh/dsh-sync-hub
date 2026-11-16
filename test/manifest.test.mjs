@@ -148,6 +148,20 @@ test('remote deletion mirrors or restores according to mode and direction', () =
   assert.equal(planScope({ ...remoteDeleted, direction: 'push' }).actions[0].type, 'upload')
 })
 
+test('plugin-settings keeps local config when both sides changed', () => {
+  const plan = planScope({
+    scopeId: 'plugin-settings',
+    localFiles: { 'profiles/desktop/cordis.patch.yml': file('local', 20, 2000) },
+    baseFiles: { 'profiles/desktop/cordis.patch.yml': file('base', 10, 1000) },
+    remoteFiles: { 'profiles/desktop/cordis.patch.yml': file('remote', 30, 3000) },
+    direction: 'both',
+    policy: 'local',
+  })
+  const action = plan.actions.find((item) => item.path.endsWith('cordis.patch.yml'))
+  assert.equal(action.type, 'upload')
+  assert.equal(action.reason, 'policy=local')
+})
+
 test('push-only and pull-only never download/upload respectively', () => {
   const push = planScope({
     scopeId: 'skills',

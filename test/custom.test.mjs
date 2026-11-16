@@ -43,8 +43,9 @@ test('custom directory and file items sync by name and honor per-device paths', 
   const first = await engineA.sync({ targetId })
   assert.ok(first.summary.uploaded >= 3, JSON.stringify(first.summary))
 
+  const settingsForManifest = await engineA.getSettings()
   const manifestText = await fsp.readFile(
-    join(backup, 'dsh-sync', 'v1', 'manifests', (await engineA.getSettings()).deviceId + '.json'),
+    join(backup, settingsForManifest.targets[0].prefix, 'manifests', settingsForManifest.deviceId + '.json'),
     'utf8',
   )
   assert.ok(manifestText.includes('custom/c_dir/README.md'))

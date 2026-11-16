@@ -51,12 +51,12 @@ async function newEngine(root) {
   return { engine, home, agentsHome, stateRoot, backup }
 }
 
-function manifestPath(backup, deviceId) {
-  return join(backup, 'dsh-sync', 'v1', 'manifests', `${deviceId}.json`)
+function manifestPath(backup, deviceId, prefix) {
+  return join(backup, prefix, 'manifests', `${deviceId}.json`)
 }
 
-async function readManifest(backup, deviceId) {
-  return JSON.parse(await fsp.readFile(manifestPath(backup, deviceId), 'utf8'))
+async function readManifest(backup, deviceId, prefix) {
+  return JSON.parse(await fsp.readFile(manifestPath(backup, deviceId, prefix), 'utf8'))
 }
 
 function sessionProjectDirs(files, sessionId) {
@@ -206,7 +206,7 @@ test('selected mode syncs only the checked session directories', async (t) => {
   const first = await engine.sync({ targetId: target.id, scopeIds: ['sessions'] })
   assert.equal(first.summary.uploaded, 1, JSON.stringify(first.summary))
   const settings = await engine.getSettings()
-  const manifestOne = await readManifest(backup, settings.deviceId)
+  const manifestOne = await readManifest(backup, settings.deviceId, target.prefix)
   assert.deepEqual(sessionProjectDirs(manifestOne.scopes.sessions.files, 'session-a'), [projectKey(cwdA)])
   assert.equal(Object.keys(manifestOne.scopes.sessions.files).length, 1)
   assert.ok(!JSON.stringify(manifestOne).includes('session-b'))
@@ -215,7 +215,7 @@ test('selected mode syncs only the checked session directories', async (t) => {
     scopes: { sessions: { mode: 'selected', selectedSessionIds: ['session-a', 'session-b', 'session-c'] } },
   })
   await engine.sync({ targetId: target.id, scopeIds: ['sessions'] })
-  const manifestAll = await readManifest(backup, settings.deviceId)
+  const manifestAll = await readManifest(backup, settings.deviceId, target.prefix)
   assert.equal(Object.keys(manifestAll.scopes.sessions.files).length, 3)
   assert.equal(sessionProjectDirs(manifestAll.scopes.sessions.files, 'session-c')[0], projectKey(cwdB))
   assert.ok(!JSON.stringify(manifestAll).includes('session-q'))
@@ -243,7 +243,7 @@ test('duplicate copies of one session id are planned once and previewed as dupli
   const result = await engine.sync({ targetId: target.id, scopeIds: ['sessions'], direction: 'push' })
   assert.equal(result.summary.uploaded, 1)
   const settings = await engine.getSettings()
-  const manifest = await readManifest(backup, settings.deviceId)
+  const manifest = await readManifest(backup, settings.deviceId, target.prefix)
   const dirs = sessionProjectDirs(manifest.scopes.sessions.files, 'session-dup')
   assert.equal(dirs.length, 1, `expected one canonical directory, got ${dirs.join(', ')}`)
 })
@@ -266,9 +266,9 @@ test('append-only sessions fast-forward instead of conflicting', async (t) => {
   assert.equal(result.summary.uploaded, 1, JSON.stringify(result.summary))
   assert.equal(result.summary.conflicts, 0, JSON.stringify(result.summary))
   const settings = await engine.getSettings()
-  const manifest = await readManifest(backup, settings.deviceId)
+  const manifest = await readManifest(backup, settings.deviceId, target.prefix)
   const rel = Object.keys(manifest.scopes.sessions.files)[0]
-  const blob = await fsp.readFile(join(backup, 'dsh-sync', 'v1', 'blobs', manifest.scopes.sessions.files[rel].sha256.slice(0, 2), manifest.scopes.sessions.files[rel].sha256.slice(2, 4), manifest.scopes.sessions.files[rel].sha256))
+  const blob = await fsp.readFile(join(backup, target.prefix, 'blobs', manifest.scopes.sessions.files[rel].sha256.slice(0, 2), manifest.scopes.sessions.files[rel].sha256.slice(2, 4), manifest.scopes.sessions.files[rel].sha256))
   assert.equal(sha256(blob), sha256(sessionBuffer(cwd, ['one', 'two'])))
 })
 
@@ -498,10 +498,10 @@ test('restore honours autoReplaceUserFolder and overwrite both directions', asyn
     osUser: 'alice',
   })
   const settingsB = await b.engine.getSettings()
-  const manifest = await readManifest(a.backup, settingsB.deviceId)
+  const manifest = await readManifest(a.backup, settingsB.deviceId, targetA.prefix)
   const rel = Object.keys(manifest.scopes.sessions.files).find((key) => key.includes('session-old'))
   const entry = manifest.scopes.sessions.files[rel]
-  const blob = await fsp.readFile(join(a.backup, 'dsh-sync', 'v1', 'blobs', entry.sha256.slice(0, 2), entry.sha256.slice(2, 4), entry.sha256))
+  const blob = await fsp.readFile(join(a.backup, targetA.prefix, 'blobs', entry.sha256.slice(0, 2), entry.sha256.slice(2, 4), entry.sha256))
   assert.equal(sha256(blob), sha256(await fsp.readFile(localFile)))
 })
 
