@@ -115,6 +115,48 @@ test('built-in capability rows come from bundles and honour profile overrides', 
   assert.equal(rows.find((row) => row.id === 'web-search-deepseek').enabled, false)
 })
 
+test('backup plugin inventory lists other devices and installs their package', async (t) => {
+  const root = await fsp.mkdtemp(join(tmpdir(), 'dsh-sync-plugin-install-'))
+  t.after(() => fsp.rm(root, { recursive: true, force: true }))
+  const backup = join(root, 'backup')
+
+  async function makeDevice(letter) {
+    const dshHome = join(root, letter, 'dsh-home')
+    const profileDir = join(dshHome, 'profiles', 'desktop')
+    await writeFile(join(profileDir, 'package.json'), JSON.stringify({
+      dependencies: letter === 'a' ? { 'demo-plugin': '1.2.3' } : {},
+      dsh: { profile: { bundles: [] } },
+    }, null, 2) + '\n')
+    const engine = await new SyncEngine({ dshHome, agentsHome: join(root, letter, 'agents'), stateRoot: join(root, letter, 'state') }).init()
+    return { engine, dshHome, profileDir }
+  }
+
+  const a = await makeDevice('a')
+  const pluginDir = join(a.profileDir, 'node_modules', 'demo-plugin')
+  await writeFile(join(pluginDir, 'package.json'), JSON.stringify({ name: 'demo-plugin', version: '1.2.3', dsh: { bundle: { patch: './cordis.patch.yml' } } }, null, 2) + '\n')
+  await writeFile(join(pluginDir, 'index.js'), 'export const demo = true\n')
+  const [targetA] = await a.engine.upsertTarget({ name: 'backup', path: backup })
+  await a.engine.saveSettings({ scopes: { plugins: { selectedPlugins: ['demo-plugin'], profile: 'desktop' } } })
+  await a.engine.sync({ targetId: targetA.id, scopeIds: ['plugins'], direction: 'push' })
+
+  const b = await makeDevice('b')
+  const [targetB] = await b.engine.upsertTarget({ name: 'backup', path: backup })
+  const inventory = await b.engine.listBackupPlugins({ targetId: targetB.id })
+  const row = inventory.plugins.find((item) => item.name === 'demo-plugin')
+  assert.ok(row)
+  assert.equal(row.own, false)
+  assert.equal(row.synced, false)
+  assert.equal(row.version, '1.2.3')
+
+  const installed = await b.engine.installBackupPlugin({ targetId: targetB.id, deviceId: row.deviceId, name: 'demo-plugin' })
+  assert.ok(installed.files >= 2)
+  const installedPkg = JSON.parse(await fsp.readFile(join(b.profileDir, 'node_modules', 'demo-plugin', 'package.json'), 'utf8'))
+  assert.equal(installedPkg.version, '1.2.3')
+  const profilePkg = JSON.parse(await fsp.readFile(join(b.profileDir, 'package.json'), 'utf8'))
+  assert.equal(profilePkg.dependencies['demo-plugin'], '1.2.3')
+  assert.ok(profilePkg.dsh.profile.bundles.includes('demo-plugin'))
+})
+
 test('plugin state captures bundles and disabled overrides and applies them back', async (t) => {
   const root = await fsp.mkdtemp(join(tmpdir(), 'dsh-sync-plugin-state-'))
   t.after(() => fsp.rm(root, { recursive: true, force: true }))
