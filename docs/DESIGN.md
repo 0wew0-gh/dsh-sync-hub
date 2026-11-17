@@ -151,6 +151,7 @@ DSH（DeepSeek Harness）把用户资产分散在多个位置：
 | scope id | 名称 | 本机来源 | 体积 | 默认 | 冲突策略 |
 | --- | --- | --- | ---: | --- | --- |
 | `plugin-settings` | 插件设置 | 各 profile 的 `package.json`、`cordis.patch.yml`、`pnpm-workspace.yaml`、`.npmrc`、`pnpm-lock.yaml`、`compatibility.json` | < 0.1 MB | 开 | 结构化合并（§5.6） |
+| `plugins` | 插件 | 所选插件在 `profiles/<profile>/node_modules/<name>/` 下的安装包 | 按插件大小 | 开 | `keep-both` |
 | `plugin-files` | 插件文件 | `$DSH_HOME/plugins/**`、`$DSH_HOME/.agent-presets/**` | 1.4 MB | 开 | 按文件 newer（可选 keep-both） |
 | `skills` | 全局 Skills | `~/.agents/skills/**`、`~/.agents/.skill-lock.json` | 25 MB | 开 | 按文件 newer；删除走 tombstone |
 | `memes` | 表情包 | `$DSH_HOME/meme-packs/**`、`$DSH_HOME/dsh-expression.json` | 7 MB | 开 | per-file keep-both |
@@ -188,12 +189,13 @@ type Target =
 每个 target 下固定版本前缀（默认 `dsh-sync-v<插件版本>/`，可配；旧默认 `dsh-sync/v1/` 会自动迁移到新前缀）：
 
 ```text
-dsh-sync-v0.3.0/
+dsh-sync-v0.4.0/
   meta.json                         # { schema, dshVersion, updatedAt, scopes, devices: {id: {name, lastSeenAt, version}} }
   manifests/<deviceId>.json         # 每设备、每 scope 的清单（同一文件内按 scope 分组）
   blobs/<aa>/<bb>/<sha256>          # 原始字节，内容寻址（aa/bb 为 sha256 前两段，避免大目录）
   snapshots/index.json              # 历史索引 { schema, entries: [{key, createdAt, deviceId, scopes, totalBytes}] }
   snapshots/<ISO-ts>/manifest.json  # 历史快照（只含清单，blob 复用 blobs/）
+  plugin-states/<profile>.json      # 插件启动与配置 { schema, profile, bundles, disabled, rows, updatedAt }
 ```
 
 设计要点：
@@ -670,7 +672,7 @@ DSH 没有「注册设置页函数」，所有设置 UI 都是插槽贡献：
       "path": "\\\\nas\\share\\dsh-sync" },
     { "id": "t_oss", "name": "阿里云 OSS", "kind": "s3", "enabled": false,
       "endpoint": "https://oss-cn-hangzhou.aliyuncs.com", "region": "cn-hangzhou",
-      "bucket": "my-bucket", "prefix": "dsh-sync-v0.3.0", "accessKeyId": "<stored-locally>",
+      "bucket": "my-bucket", "prefix": "dsh-sync-v0.4.0", "accessKeyId": "<stored-locally>",
       "forcePathStyle": false, "providerHint": "oss" }
   ],
   "scopes": {

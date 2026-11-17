@@ -178,6 +178,27 @@ test('concurrent edits keep both sides instead of overwriting', async (t) => {
   assert.deepEqual(await fsp.readFile(join(dir, conflictName)), remoteBytes)
 })
 
+test('pendingCounts exposes the changed session ids for the sidebar tooltip', async (t) => {
+  const root = await fsp.mkdtemp(join(tmpdir(), 'dsh-sync-pending-details-'))
+  t.after(() => fsp.rm(root, { recursive: true, force: true }))
+  const a = await newEngine(join(root, 'a'))
+  await makeHome(a.home, a.agentsHome)
+  const targetId = (await a.engine.upsertTarget({ name: 'backup', path: a.backup }))[0].id
+  await a.engine.sync({ targetId })
+
+  const sessionFile = join(a.home, 'sessions', '--D-demo--', 'session-1', 'session.v4.jsonl.zstd')
+  await fsp.appendFile(sessionFile, zstdCompressSync(Buffer.from('{"type":"user/message","seq":2}\n')))
+
+  const pending = await a.engine.pendingCounts({ targetId })
+  assert.ok(pending.total > 0)
+  assert.ok(Array.isArray(pending.details.sessions))
+  assert.ok(pending.details.sessions.some((row) => row.id === 'session-1' && row.upload > 0))
+  assert.ok(pending.details.scopes.some((row) => row.id === 'sessions'))
+
+  const plan = await a.engine.preview({ targetId })
+  assert.ok(!plan.actions.some((action) => action.type === 'identical'))
+})
+
 test('a deleted local file is asked about, then restored or skipped by choice', async (t) => {
   const root = await fsp.mkdtemp(join(tmpdir(), 'dsh-sync-delete-'))
   t.after(() => fsp.rm(root, { recursive: true, force: true }))
