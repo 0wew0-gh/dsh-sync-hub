@@ -2,7 +2,7 @@
 
 DSH（DeepSeek Harness）插件：把 **skills、插件设置、插件文件、会话数据、全局 AGENTS.md** 同步到用户自己选择的位置 —— 本地路径、WebDAV（坚果云/Nextcloud/群晖）、S3 兼容对象存储（阿里云 OSS/腾讯 COS/MinIO/R2/B2 等）。
 
-> 当前状态：**v0.1 可用（仅本地目录目标）**。已完成扫描/清单/同内容判定/本地备份/恢复/冲突保留双方/设置页 UI 骨架；WebDAV、S3、文本三方合并与历史恢复尚未实现。
+> 当前状态：**v0.4 可用**。已实现本地目录与 OSS/S3 兼容对象存储目标、会话/插件同步与跨设备浏览、设置页 UI；WebDAV、文本三方合并与部分历史功能仍在计划中。
 > 包名 `dsh-sync-hub` 为项目代号，最终名称待确认。
 
 ## 快速验证（无需安装进 DSH）
@@ -25,6 +25,7 @@ node scripts/real-backup-test.mjs
 - 同步项：`agents-md`、`plugin-settings`、`plugin-files`、`plugins`、`skills`、`memes`、`skins`、`pets`、`sessions`（附件/统计默认关闭）。
 - 个性化资源：`memes`（`meme-packs` + `dsh-expression.json`）、`skins`（`skins`、`skin-center` + `skin-center-active.json`）、`pets`（`pets` + `pet.json`）默认开启、冲突保留双方；宠物安装残留 `*.install-*` 与 `skin-center` 缓存不参与同步。
 - 本地目录目标（普通磁盘、UNC、映射盘、同步盘目录）；目标可为磁盘根目录，仓库始终落在 `<目标>/dsh-sync-v<插件版本>/` 前缀下。设置页「同步」标签首卡内的「备份信息」会显示当前 DSH 版本与备份时记录的 DSH 版本，每次同步时更新；「打开备份目录」按钮会在系统文件管理器中打开当前目标的仓库根目录。
+- OSS / S3 兼容目标：填写 Endpoint、Region、Bucket、AccessKey ID/Secret（Secret 只保存在本机 `secrets.json`），支持阿里云 OSS 等 S3 兼容服务；对象布局与本地目录一致（前缀下 `meta.json`、`manifests/`、`blobs/`），请求使用 Signature V4。Bucket 探测、读写、列举与删除均通过 HTTPS 完成。
 - 内容寻址 blob + manifest；同内容不覆盖、不改 mtime；单侧变更快进；双侧冲突按 scope 策略（会话/技能保留双方，AGENTS.md 取较新，插件设置类文件冲突时**本机优先**并上传本机版本，避免旧备份把插件开关还原）。
 - 设置页：优先注册为设置弹窗**左侧导航的一级「数据同步」页**（`settings.section`）；仅当宿主没有该插槽时回退到「插件 → 内置插件」里的 tab（`settings.plugins.tab`）。页面标签顺序为 **同步、同步项、高级、自定义、会话、插件、目标、历史**；「会话」「插件」标签会随对应同步项开关自动隐藏。「同步」页常驻变更预览并自动加载，策略类配置集中在「高级」。
 - 同步速度与进度：同步页显示实时速度、已传/总字节与预计剩余时间；结果摘要显示平均速度与用时。
@@ -72,7 +73,7 @@ DSH 的用户资产分散在多处，换机、重装、多台设备之间没有�
 ## 能力与路线
 
 - 在 **设置 → 数据同步**（左侧导航一级页；旧宿主回退为 设置 → 插件 的 tab）里按项勾选同步范围，管理多个同步目标（v0.1 已实现）。
-- 目标类型：本地目录/UNC/映射网盘/同步盘目录（已实现）；WebDAV、S3 兼容对象存储、rclone（后续）。
+- 目标类型：本地目录/UNC/映射网盘/同步盘目录、OSS/S3 兼容对象存储（已实现）；WebDAV、rclone（后续）。
 - 增量同步：内容寻址 blob + manifest，只传变化的文件（已实现）。
 - **git 式同步语义**：内容相同即同一个对象——不覆盖、不重传、不改 mtime；只有一侧变化时快进；两侧都变才合并/裁决（已实现二进制与按文件策略；文本 merge3 与配置结构化合并待实现）。
 - 冲突处理：会话/插件文件默认保留双方（`.conflict-<设备>-<时间>`），AGENTS.md 取较新，插件设置类文件（package.json / cordis.patch.yml）冲突时本机优先；不会用旧备份静默覆盖本机插件开关。

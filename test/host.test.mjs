@@ -129,7 +129,7 @@ test('host registers routes and answers loopback JSON envelopes', async (t) => {
   }
 
   const status = await call('status', {})
-  assert.equal(status.version, '0.4.3')
+  assert.equal(status.version, '0.4.4')
   assert.equal(status.sidebarProgressMode, 'running')
   assert.equal(status.pendingRefreshSeconds, 600)
 

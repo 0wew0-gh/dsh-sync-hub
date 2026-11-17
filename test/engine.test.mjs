@@ -199,6 +199,46 @@ test('pendingCounts exposes the changed session ids for the sidebar tooltip', as
   assert.ok(!plan.actions.some((action) => action.type === 'identical'))
 })
 
+test('preview and sync persist the last selected target', async (t) => {
+  const root = await fsp.mkdtemp(join(tmpdir(), 'dsh-sync-last-target-'))
+  t.after(() => fsp.rm(root, { recursive: true, force: true }))
+  const a = await newEngine(join(root, 'a'))
+  await makeHome(a.home, a.agentsHome)
+  const first = (await a.engine.upsertTarget({ name: 'first', path: join(root, 'backup-a') }))[0]
+  const [second] = await a.engine.saveSettings({}).then((settings) => {
+    const targets = settings.targets
+    return targets
+  }).then(async () => await a.engine.upsertTarget({ name: 'second', path: join(root, 'backup-b') }))
+  await a.engine.preview({ targetId: second.id, scopeIds: ['agents-md'], direction: 'push' })
+  assert.equal((await a.engine.getSettings()).lastTargetId, second.id)
+  assert.equal((await a.engine.status()).defaultTargetId, second.id)
+  await a.engine.sync({ targetId: first.id, scopeIds: ['agents-md'], direction: 'push' })
+  assert.equal((await a.engine.getSettings()).lastTargetId, first.id)
+  assert.equal((await a.engine.status()).defaultTargetId, first.id)
+})
+
+test('an interrupted sync persists completed files in the manifest', async (t) => {
+  const root = await fsp.mkdtemp(join(tmpdir(), 'dsh-sync-checkpoint-'))
+  t.after(() => fsp.rm(root, { recursive: true, force: true }))
+  const a = await newEngine(join(root, 'a'))
+  await makeHome(a.home, a.agentsHome)
+  const [target] = await a.engine.upsertTarget({ name: 'backup', path: a.backup })
+
+  const originalUpload = a.engine.uploadScope.bind(a.engine)
+  a.engine.uploadScope = async (...args) => {
+    await originalUpload(...args)
+    throw new Error('simulated crash after upload')
+  }
+
+  await assert.rejects(() => a.engine.sync({ targetId: target.id, scopeIds: ['agents-md'], direction: 'push' }))
+  const settings = await a.engine.getSettings()
+  const manifest = JSON.parse(await fsp.readFile(
+    join(a.backup, target.prefix, 'manifests', settings.deviceId + '.json'),
+    'utf8',
+  ))
+  assert.ok(Object.keys(manifest.scopes['agents-md'].files).length >= 1)
+})
+
 test('a deleted local file is asked about, then restored or skipped by choice', async (t) => {
   const root = await fsp.mkdtemp(join(tmpdir(), 'dsh-sync-delete-'))
   t.after(() => fsp.rm(root, { recursive: true, force: true }))

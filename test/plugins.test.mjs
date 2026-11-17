@@ -76,6 +76,13 @@ test('plugins scope uploads the selected package and records its backup version'
   const saved = JSON.parse(await fsp.readFile(stateFile, 'utf8'))
   assert.equal(saved.schema, 'dsh-sync-hub/v1/plugin-state')
   assert.ok(Array.isArray(saved.bundles))
+
+  // Unchecking a plugin must not delete its already-backed-up files.
+  await engine.saveSettings({ scopes: { plugins: { selectedPlugins: [], profile: 'desktop' } } })
+  const deselected = await engine.preview({ targetId: target.id, scopeIds: ['plugins'], direction: 'both' })
+  assert.equal(deselected.summary.delete || 0, 0)
+  assert.equal(deselected.summary.upload || 0, 0)
+  assert.ok((deselected.summary.identical || 0) >= 2)
 })
 
 test('built-in capability rows come from bundles and honour profile overrides', async (t) => {
