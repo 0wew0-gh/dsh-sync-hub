@@ -65,6 +65,9 @@ test('plugins scope uploads the selected package and records its backup version'
   assert.ok(manifest.scopes.plugins.files['plugins/desktop/packages/demo-plugin/package.json'])
 
   const listed = await engine.listPlugins({ targetId: target.id })
+  assert.equal(listed.builtins.length, 4)
+  assert.deepEqual(listed.builtins.map((item) => item.name), ['子智能体', '网页搜索与获取', 'Agent 循环', '终端'])
+  assert.ok(Array.isArray(listed.experimental))
   const row = listed.rows.find((item) => item.name === 'demo-plugin')
   assert.equal(row.selected, true)
   assert.equal(row.backupVersion, '1.2.3')
@@ -91,6 +94,12 @@ test('built-in capability rows come from bundles and honour profile overrides', 
     "      name: '@deepseek-ai/dsh-other'",
     '',
   ].join('\n'))
+  // web-app is applied after base: its override must win over the base default.
+  await writeFile(join(root, 'dsh-install', 'node_modules', '@deepseek-ai', 'dsh-web-app', 'cordis.patch.yml'), [
+    '- id: web-search-deepseek',
+    '  disabled: true',
+    '',
+  ].join('\n'))
   await writeFile(join(dshHome, 'profiles', 'desktop', 'cordis.patch.yml'), '- id: subagent\n  disabled: true\n')
 
   const previous = process.env.DSH_INSTALL_DIR
@@ -103,7 +112,7 @@ test('built-in capability rows come from bundles and honour profile overrides', 
   const rows = await readBuiltinCapabilities(dshHome, 'desktop')
   assert.deepEqual(rows.map((row) => row.id), ['subagent', 'web-search-deepseek'])
   assert.equal(rows.find((row) => row.id === 'subagent').enabled, false)
-  assert.equal(rows.find((row) => row.id === 'web-search-deepseek').enabled, true)
+  assert.equal(rows.find((row) => row.id === 'web-search-deepseek').enabled, false)
 })
 
 test('plugin state captures bundles and disabled overrides and applies them back', async (t) => {
