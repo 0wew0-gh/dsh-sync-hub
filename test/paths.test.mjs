@@ -5,8 +5,8 @@ import { resolveDshVersion, resolveInside } from '../lib/core/paths.js'
 
 test('resolveInside allows a filesystem root as the target directory', () => {
   const root = process.platform === 'win32' ? 'C:\\' : '/'
-  const inside = resolveInside(root, 'dsh-sync-v0.4.0')
-  assert.equal(inside, join(root, 'dsh-sync-v0.4.0'))
+  const inside = resolveInside(root, 'dsh-sync-v0.4.1')
+  assert.equal(inside, join(root, 'dsh-sync-v0.4.1'))
 
   assert.throws(() => resolveInside(join(root, 'backup'), '..' + sep + 'escape'))
 })

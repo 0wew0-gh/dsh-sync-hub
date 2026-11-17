@@ -44,7 +44,7 @@ node scripts/real-backup-test.mjs
 - 从备份恢复：同样属于**同步流程**功能（读取目标端最新 manifest、列出备份会话、选择目标路径、`autoReplaceUserFolder` 等），宿主接口 `sessions.backup.list` / `sessions.restore` 保留；**不在「会话」页展示**。恢复前把本机同名会话（含重复副本）移动到本机备份目录，原子写并改写会话头 cwd，完成后提示重启 DSH / 清理投影缓存。
 - 会话目录（「会话」标签）：同步会话选择列表按 `$DSH_HOME/sessions` 下的工作区分组，目录不存在时标红点。**目录迁移合并到选择列表**：仅当该会话目录在本机**不存在**时，项目分组右侧才显示「选择目录…」与「迁移到该目录」；目录已存在的分组不显示这两个按钮，也不占额外提示空间。页面保留「清理重复副本」（移到 `sessions/.dedupe-backup-<时间戳>`，不删主副本）。「同一会话对比」和「从备份恢复」属于同步流程，已不在会话页展示。对应宿主接口 `sessions.list` / `sessions.compare` / `sessions.backup.list` / `sessions.sync` / `sessions.restore` / `sessions.overwrite` / `sessions.relocate` / `sessions.relocateUser` / `sessions.dedupe`。
 - 按电脑配置目标目录：目标表单里可填「当前电脑目录」，并为其它电脑预设各自的目录映射；同一份配置迁移到不同电脑后各用各的路径。
-- 变更预览：动作按类型分组；`identical` 只计入顶部汇总、不再作为分组条目，避免大量相同文件把待上传/下载项挤出上限；会话类条目显示为 **`<工作区名称>-<会话名称>`**（工作区取会话 cwd 的最后一段，会话名取 DSH 标题；缺失时回退为工程目录名/sessionID 缩写），下方保留完整相对路径，便于对照会话同步项。
+- 变更预览：动作按类型分组；顶部统计项（待上传/待下载/冲突/待决定/删除/跳过/相同）是筛选按钮，点击后只在下方显示对应类型的条目，再次点击恢复全部；`identical` 只计入顶部汇总、不再作为分组条目，避免大量相同文件把待上传/下载项挤出上限；会话类条目显示为 **`<工作区名称>-<会话名称>`**（工作区取会话 cwd 的最后一段，会话名取 DSH 标题；缺失时回退为工程目录名/sessionID 缩写），下方保留完整相对路径，便于对照会话同步项。
 - 目录选择器：目标/自定义项/会话路径旁提供「浏览…」，可直接逐级选择目录（宿主只读列目录接口）。窗口使用不透明深色遮罩与实心面板、更高层级，点击遮罩不会误关闭；支持手动输入路径、上一级/主目录/刷新、单击进入与双击直接选择，Esc 或「取消」关闭。
 - 插件展示元数据：`package.json.icon`（`assets/icon.svg`）+ `locale/{en,zh,zh-cn}.json` 的 `meta.title` / `meta.description`，插件页显示为「数据同步 / Data Sync」并带图标。
 - 宿主 API：`/dsh-sync/*`（仅 loopback），长任务通过 `runId` 轮询；`status` 附带 `activeRun` 与 `autoSync` 状态。
