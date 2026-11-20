@@ -12,7 +12,9 @@ MEMORY.md
 
 # 本地调研/临时产物
 .recon/
-.tmp/
+.tmp*/
+.temp/
+tmp/
 *.log
 *.tmp
 *.bak

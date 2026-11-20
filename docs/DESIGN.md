@@ -189,7 +189,7 @@ type Target =
 每个 target 下固定版本前缀（默认 `dsh-sync-v<插件版本>/`，可配；旧默认 `dsh-sync/v1/` 会自动迁移到新前缀）：
 
 ```text
-dsh-sync-v0.4.4/
+dsh-sync-v0.4.5/
   meta.json                         # { schema, dshVersion, updatedAt, scopes, devices: {id: {name, lastSeenAt, version}} }
   manifests/<deviceId>.json         # 每设备、每 scope 的清单（同一文件内按 scope 分组）
   blobs/<aa>/<bb>/<sha256>          # 原始字节，内容寻址（aa/bb 为 sha256 前两段，避免大目录）
@@ -672,7 +672,7 @@ DSH 没有「注册设置页函数」，所有设置 UI 都是插槽贡献：
       "path": "\\\\nas\\share\\dsh-sync" },
     { "id": "t_oss", "name": "阿里云 OSS", "kind": "s3", "enabled": false,
       "endpoint": "https://oss-cn-hangzhou.aliyuncs.com", "region": "cn-hangzhou",
-      "bucket": "my-bucket", "prefix": "dsh-sync-v0.4.4", "accessKeyId": "<stored-locally>",
+      "bucket": "my-bucket", "prefix": "dsh-sync-v0.4.5", "accessKeyId": "<stored-locally>",
       "forcePathStyle": false, "providerHint": "oss" }
   ],
   "scopes": {

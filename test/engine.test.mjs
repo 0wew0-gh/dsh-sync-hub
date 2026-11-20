@@ -239,6 +239,51 @@ test('an interrupted sync persists completed files in the manifest', async (t) =
   assert.ok(Object.keys(manifest.scopes['agents-md'].files).length >= 1)
 })
 
+test('uploadScope stops before the next file once cancelled', async (t) => {
+  const root = await fsp.mkdtemp(join(tmpdir(), 'dsh-sync-cancel-'))
+  t.after(() => fsp.rm(root, { recursive: true, force: true }))
+  const engine = new SyncEngine({ dshHome: join(root, 'home'), agentsHome: join(root, 'agents'), stateRoot: join(root, 'state') })
+  const first = join(root, 'a.txt')
+  const second = join(root, 'b.txt')
+  await fsp.writeFile(first, 'a')
+  await fsp.writeFile(second, 'b')
+  const entries = new Map([
+    ['agents-md/a.txt', { abs: first, size: 1, mtimeMs: 1 }],
+    ['agents-md/b.txt', { abs: second, size: 1, mtimeMs: 1 }],
+  ])
+  const actions = [
+    { type: 'upload', scope: 'agents-md', path: 'agents-md/a.txt' },
+    { type: 'upload', scope: 'agents-md', path: 'agents-md/b.txt' },
+  ]
+  const puts = []
+  const provider = {
+    async head() { return undefined },
+    async put(key, buffer) { puts.push(key); },
+  }
+  let processed = 0
+  await assert.rejects(
+    () => engine.uploadScope({
+      provider,
+      scopeId: 'agents-md',
+      entries,
+      localFiles: {
+        'agents-md/a.txt': { size: 1, mtimeMs: 1, sha256: sha256Hex('a') },
+        'agents-md/b.txt': { size: 1, mtimeMs: 1, sha256: sha256Hex('b') },
+      },
+      actions,
+      stats: { uploaded: 0, bytesUploaded: 0 },
+      onAction: () => { processed += 1 },
+      isCancelled: () => processed >= 1,
+    }),
+    (error) => error.code === 'cancelled',
+  )
+  assert.equal(puts.length, 1)
+})
+
+function sha256Hex(text) {
+  return createHash('sha256').update(text).digest('hex')
+}
+
 test('a deleted local file is asked about, then restored or skipped by choice', async (t) => {
   const root = await fsp.mkdtemp(join(tmpdir(), 'dsh-sync-delete-'))
   t.after(() => fsp.rm(root, { recursive: true, force: true }))
